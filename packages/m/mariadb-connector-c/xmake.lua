@@ -14,6 +14,8 @@ package("mariadb-connector-c")
 
     add_linkdirs("lib/mariadb")
 
+    add_configs("shared", {description = "Build shared library.", default = true, type = "boolean", readonly = true})
+
     if is_plat("windows") then
         add_configs("iconv", {description = "Enables character set conversion.", default = false, type = "boolean"})
         add_configs("msi", {description = "Build MSI installation package.", default = false, type = "boolean"})
@@ -47,7 +49,6 @@ package("mariadb-connector-c")
     on_install("bsd", "linux", "windows", function(package)
         local configs = {}
         table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:debug() and "Debug" or "Release"))
-        table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
         for name, enabled in pairs(package:configs()) do
             if not package:extraconf("configs", name, "builtin") then
                 if enabled then
@@ -57,12 +58,10 @@ package("mariadb-connector-c")
                 end
             end
         end
-        if package:config("pic") ~= false then
-            table.insert(configs, "-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
-        end
         import("package.tools.cmake").install(package, configs)
-        print(os.files(path.join(package:installdir("lib"), "**")))
-        print(os.files(path.join(package:installdir("bin"), "**")))
+        os.trycp(path.join(package:installdir("lib"), "mariadb", "*.dll"), package:installdir("bin"))
+        os.trycp(path.join(package:installdir("lib"), "mariadb", "*.so"), package:installdir("bin"))
+        os.cp(path.join(package:installdir("lib"), "mariadb", "plugin"), package:installdir("bin"))
     end)
 
     on_test(function (package)
